@@ -31,6 +31,9 @@
   <summary>Look dentro do Dashboard</summary>
 
 - Grafico de tabela: mostrando os top artistas, suas músicas de maior popularidade e o album
-- Grafico de KPI: compara a popularidade do ano selecionado com o ano anterior
+- Grafico de KPI: compara da média de popularidade do ano selecionado com o ano anterior
+- Distribuição de Danceability por Gênero
+- Gráfico de radar/spider: Comparação de Atributos Musicais
+- Gráfico de KPI: faixas gravadas ao vivo no ano selecionado
 
 </details>

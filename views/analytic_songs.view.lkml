@@ -1,9 +1,9 @@
-
 view: analytic_songs {
   derived_table: {
     sql: WITH data_spotify AS (
         SELECT
           track_id,
+          track_artist as artist,
           track_popularity as popularity,
           track_album_release_date as release_date,
           track_album_name,
@@ -26,14 +26,14 @@ view: analytic_songs {
             CAST(EXTRACT(ISOYEAR FROM track_album_release_date) AS STRING)
           {% endcondition %}
       ), cte_year_select AS (
-        SELECT AVG(track_popularity) as popularity_year_select
+        SELECT AVG(track_popularity) as popularity_year_select, count(*) as track_released_selected_year
         FROM top_songs_spotify
         WHERE
           {% condition select_year %}
             CAST(EXTRACT(ISOYEAR FROM track_album_release_date) AS STRING)
           {% endcondition %}
       ), cte_year_previous AS (
-        SELECT AVG(track_popularity) as popularity_year_previous
+        SELECT AVG(track_popularity) as popularity_year_previous, count(*) as track_released_year_previous
         FROM top_songs_spotify
          WHERE
           {% condition select_year %}
@@ -44,8 +44,13 @@ view: analytic_songs {
       SELECT * FROM data_spotify, cte_year_select, cte_year_previous ;;
   }
 
-  measure: count {
-    type: count
+  measure: track_released_selected_year {
+    type: number
+    sql: ${TABLE}.track_released_selected_year ;;
+  }
+  measure: track_released_year_previous {
+    type: number
+    sql: ${TABLE}.track_released_year_previous ;;
   }
 
   dimension: track_id {
@@ -53,6 +58,16 @@ view: analytic_songs {
     hidden: yes
     type: string
     sql: ${TABLE}.track_id ;;
+  }
+
+  dimension: artist {
+    type: string
+    sql: ${TABLE}.artist ;;
+    link: {
+      label: "Google"
+      url: "http://www.google.com/search?q={{ value }}"
+      icon_url: "http://google.com/favicon.ico"
+    }
   }
 
   dimension: popularity {
@@ -81,6 +96,11 @@ view: analytic_songs {
   dimension: track_name {
     type: string
     sql: ${TABLE}.track_name ;;
+    link: {
+      label: "Google"
+      url: "http://www.google.com/search?q={{ value | append: ' - ' | append: analytic_songs.artist._value }}"
+      icon_url: "http://google.com/favicon.ico"
+    }
   }
 
   dimension: playlist_genre {
@@ -133,6 +153,17 @@ view: analytic_songs {
     sql: ${TABLE}.speed ;;
   }
 
+  dimension: danceability_classification {
+    type: string
+    sql:
+      CASE
+        WHEN ${danceability} < 0.4 THEN "Low"
+        WHEN ${danceability} >= 0.4 AND ${danceability} < 0.7 THEN "Moderately"
+        ELSE "Highly"
+      END
+    ;;
+  }
+
   dimension: duration {
     type: number
     sql: ${TABLE}.duration ;;
@@ -141,6 +172,7 @@ view: analytic_songs {
     type: average
     sql: ${popularity} ;;
     value_format: "#.###"
+    drill_fields: [count]
   }
   measure: average_energy{
     type: average
@@ -171,6 +203,7 @@ view: analytic_songs {
     type: average
     sql: ${liveness} ;;
     value_format: "#.###"
+    drill_fields: [artist, track_name, track_album_name, playlist_genre]
   }
   measure: average_instrumentalness {
     type: average
@@ -187,6 +220,21 @@ view: analytic_songs {
     type: count_distinct
     sql: ${track_name} ;;
     filters: [liveness: ">=0.8"]
+    drill_fields: [artist, track_name, track_album_name, playlist_genre]
+  }
+
+  measure: songs_instrumentalness {
+    type: count_distinct
+    sql: ${track_name} ;;
+    filters: [instrumentalness: ">=0.8"]
+    drill_fields: [artist, track_name, track_album_name, playlist_genre]
+  }
+
+  measure: songs_acousticness {
+    type: count_distinct
+    sql: ${track_name} ;;
+    filters: [acousticness: ">=0.8"]
+    drill_fields: [track_name, artist]
   }
 
   measure: popularity_year_select {
@@ -201,9 +249,24 @@ view: analytic_songs {
     value_format: "#.##"
   }
 
-  measure: corr {
+  measure: corr_loudness_energy {
     type: number
-    sql: corr(${duration}, ${popularity}) ;;
+    sql: corr(${loudness}, ${energy}) ;;
+    value_format: "#.##"
+    drill_fields: [loudness, energy]
+
+  }
+
+  measure: corr_valence_danceability {
+    type: number
+    sql: corr(${valence}, ${danceability}) ;;
+    value_format: "#.##"
+    drill_fields: [valence, danceability]
+
+  }
+
+  measure: count {
+    type: count
   }
 
   dimension: year {
