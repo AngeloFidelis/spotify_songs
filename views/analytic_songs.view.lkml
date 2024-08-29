@@ -1,4 +1,6 @@
+include: "extends.view"
 view: analytic_songs {
+  extends: [extends]
   derived_table: {
     sql: WITH data_spotify AS (
         SELECT
@@ -6,20 +8,16 @@ view: analytic_songs {
           track_artist as artist,
           track_popularity as popularity,
           track_album_release_date as release_date,
-          track_album_name,
           playlist_name,
           track_name,
           playlist_genre,
           danceability,
           energy,
           loudness,
-          speechiness,
           instrumentalness,
           liveness,
           valence,
-          acousticness,
-          time as speed,
-          duration_ms / 60000 as duration
+          acousticness
         FROM top_songs_spotify
         WHERE
           {% condition select_year %}
@@ -53,28 +51,6 @@ view: analytic_songs {
     sql: ${TABLE}.track_released_year_previous ;;
   }
 
-  dimension: track_id {
-    primary_key: yes
-    hidden: yes
-    type: string
-    sql: ${TABLE}.track_id ;;
-  }
-
-  dimension: artist {
-    type: string
-    sql: ${TABLE}.artist ;;
-    link: {
-      label: "Google"
-      url: "http://www.google.com/search?q={{ value }}"
-      icon_url: "http://google.com/favicon.ico"
-    }
-  }
-
-  dimension: popularity {
-    type: number
-    sql: ${TABLE}.popularity ;;
-  }
-
   dimension_group: release_date {
     type: time
     timeframes: [raw, date, week, month, quarter, year]
@@ -83,24 +59,9 @@ view: analytic_songs {
     sql: ${TABLE}.release_date ;;
   }
 
-  dimension: track_album_name {
-    type: string
-    sql: ${TABLE}.track_album_name ;;
-  }
-
   dimension: playlist_name {
     type: string
     sql: ${TABLE}.playlist_name ;;
-  }
-
-  dimension: track_name {
-    type: string
-    sql: ${TABLE}.track_name ;;
-    link: {
-      label: "Google"
-      url: "http://www.google.com/search?q={{ value | append: ' - ' | append: analytic_songs.artist._value }}"
-      icon_url: "http://google.com/favicon.ico"
-    }
   }
 
   dimension: playlist_genre {
@@ -123,11 +84,6 @@ view: analytic_songs {
     sql: ${TABLE}.loudness ;;
   }
 
-  dimension: speechiness {
-    type: number
-    sql: ${TABLE}.speechiness ;;
-  }
-
   dimension: instrumentalness {
     type: number
     sql: ${TABLE}.instrumentalness ;;
@@ -148,11 +104,6 @@ view: analytic_songs {
     sql: ${TABLE}.acousticness ;;
   }
 
-  dimension: speed {
-    type: number
-    sql: ${TABLE}.speed ;;
-  }
-
   dimension: danceability_classification {
     type: string
     sql:
@@ -164,10 +115,6 @@ view: analytic_songs {
     ;;
   }
 
-  dimension: duration {
-    type: number
-    sql: ${TABLE}.duration ;;
-  }
   measure: average_popularity {
     type: average
     sql: ${popularity} ;;
@@ -194,25 +141,15 @@ view: analytic_songs {
     sql: ${valence} ;;
     value_format: "#.###"
   }
-  measure: average_speed_BPM {
-    type: average
-    sql: ${speed} ;;
-    value_format: "#.###"
-  }
   measure: average_liveness {
     type: average
     sql: ${liveness} ;;
     value_format: "#.###"
-    drill_fields: [artist, track_name, track_album_name, playlist_genre]
+    drill_fields: [artist, track_name, playlist_genre]
   }
   measure: average_instrumentalness {
     type: average
     sql: ${instrumentalness} ;;
-    value_format: "#.###"
-  }
-  measure: average_duration {
-    type: average
-    sql: ${duration} ;;
     value_format: "#.###"
   }
 
@@ -220,14 +157,14 @@ view: analytic_songs {
     type: count_distinct
     sql: ${track_name} ;;
     filters: [liveness: ">=0.8"]
-    drill_fields: [artist, track_name, track_album_name, playlist_genre]
+    drill_fields: [artist, track_name, playlist_genre]
   }
 
   measure: songs_instrumentalness {
     type: count_distinct
     sql: ${track_name} ;;
     filters: [instrumentalness: ">=0.8"]
-    drill_fields: [artist, track_name, track_album_name, playlist_genre]
+    drill_fields: [artist, track_name, playlist_genre]
   }
 
   measure: songs_acousticness {
